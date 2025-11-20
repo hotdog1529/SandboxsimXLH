@@ -118,11 +118,46 @@ function physics(){
                 }
             }
 
-            if(cell===LAVA){
-                let below=id(x,y+1);
-                if(grid[below]===WATER){ grid[below]=STONE; grid[idx]=EMPTY; }
-                else if(grid[below]===EMPTY){grid[below]=LAVA; grid[idx]=EMPTY;}
-            }
+            if (cell === LAVA) {
+    let below = id(x, y + 1);
+
+    // Lava falls into empty space
+    if (grid[below] === EMPTY) {
+        grid[below] = LAVA;
+        grid[idx] = EMPTY;
+        continue;
+    }
+
+    // Lava reacts with water (makes stone)
+    if (grid[below] === WATER) {
+        grid[below] = STONE;
+        grid[idx] = EMPTY;
+        continue;
+    }
+
+    // --- SPREAD SIDEWAYS IF BLOCKED ---
+
+    // Random direction: left or right
+    let dir = Math.random() < 0.5 ? -1 : 1;
+    let side1 = id(x + dir, y);
+    let side2 = id(x - dir, y);
+
+    // Try random direction first
+    if (grid[side1] === EMPTY) {
+        grid[side1] = LAVA;
+        grid[idx] = EMPTY;
+        continue;
+    }
+
+    // Try the opposite direction
+    if (grid[side2] === EMPTY) {
+        grid[side2] = LAVA;
+        grid[idx] = EMPTY;
+        continue;
+    }
+
+    // If lava can't move at all, do nothing.
+}
 
             if(cell===SMOKE){
                 let up=id(x,y-1);
