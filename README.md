@@ -1,1 +1,153 @@
-# SandboxsimXLH
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Advanced Sandbox Simulator</title>
+<style>
+    body {
+        margin: 0;
+        background: #222;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        align-items: center;
+        color: white;
+        font-family: sans-serif;
+        user-select: none;
+    }
+    #ui {
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    button, select, input {
+        font-size: 16px;
+        padding: 6px;
+    }
+    canvas {
+        border: 2px solid white;
+        image-rendering: pixelated;
+        touch-action: none;
+    }
+</style>
+</head>
+<body>
+
+<div id="ui">
+    <select id="material">
+        <option value="1">Sand</option>
+        <option value="2">Water</option>
+        <option value="3">Lava</option>
+        <option value="4">Smoke</option>
+        <option value="5">Wall</option>
+    </select>
+
+    <label>Brush Size:
+        <input id="brush" type="range" min="1" max="10" value="2">
+    </label>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const CELL=3, W=200, H=200;
+const canvas=document.getElementById("canvas");
+canvas.width=W*CELL;
+canvas.height=H*CELL;
+const ctx=canvas.getContext("2d");
+
+const EMPTY=0,SAND=1,WATER=2,LAVA=3,SMOKE=4,WALL=5;
+
+let matColors={0:"#000",1:"#FFD27F",2:"#3FA9F5",3:"#FF5E3A",4:"#AAAAAA",5:"#777777"};
+let grid=new Array(W*H).fill(0);
+let materialSelect=document.getElementById("material");
+let brush=document.getElementById("brush");
+
+function id(x,y){return y*W+x;}
+
+function place(x,y){
+    let b=parseInt(brush.value);
+    for(let dy=-b;dy<=b;dy++){
+        for(let dx=-b;dx<=b;dx++){
+            let nx=x+dx, ny=y+dy;
+            if(nx>=0&&nx<W&&ny>=0&&ny<H){
+                grid[id(nx,ny)]=parseInt(materialSelect.value);
+            }
+        }
+    }
+}
+
+function handleInput(clientX,clientY){
+    const r=canvas.getBoundingClientRect();
+    let x=Math.floor((clientX-r.left)/CELL);
+    let y=Math.floor((clientY-r.top)/CELL);
+    place(x,y);
+}
+
+canvas.addEventListener("mousedown",e=>handleInput(e.clientX,e.clientY));
+canvas.addEventListener("mousemove",e=>{if(e.buttons===1)handleInput(e.clientX,e.clientY);});
+canvas.addEventListener("touchstart",e=>{e.preventDefault();for(let t of e.touches)handleInput(t.clientX,t.clientY);});
+canvas.addEventListener("touchmove",e=>{e.preventDefault();for(let t of e.touches)handleInput(t.clientX,t.clientY);});
+
+function physics(){
+    for(let y=H-2;y>=0;y--){
+        for(let x=0;x<W;x++){
+            let idx=id(x,y), cell=grid[idx];
+
+            if(cell===SAND){
+                let below=id(x,y+1);
+                if(grid[below]===EMPTY||grid[below]===WATER||grid[below]===SMOKE){
+                    grid[below]=SAND; grid[idx]=EMPTY;
+                } else {
+                    let dl=id(x-1,y+1), dr=id(x+1,y+1);
+                    if(x>0&&(grid[dl]===EMPTY||grid[dl]===WATER)) {grid[dl]=SAND; grid[idx]=EMPTY;}
+                    else if(x<W-1&&(grid[dr]===EMPTY||grid[dr]===WATER)) {grid[dr]=SAND; grid[idx]=EMPTY;}
+                }
+            }
+
+            if(cell===WATER){
+                let below=id(x,y+1);
+                if(grid[below]===EMPTY){grid[below]=WATER; grid[idx]=EMPTY;}
+                else {
+                    let dirs=[-1,1];
+                    let d=dirs[Math.floor(Math.random()*2)];
+                    let side=id(x+d,y);
+                    if(x+d>=0&&x+d<W&&grid[side]===EMPTY){grid[side]=WATER; grid[idx]=EMPTY;}
+                }
+            }
+
+            if(cell===LAVA){
+                let below=id(x,y+1);
+                if(grid[below]===WATER){ grid[below]=STONE; grid[idx]=EMPTY; }
+                else if(grid[below]===EMPTY){grid[below]=LAVA; grid[idx]=EMPTY;}
+            }
+
+            if(cell===SMOKE){
+                let up=id(x,y-1);
+                if(y>0 && grid[up]===EMPTY){grid[up]=SMOKE; grid[idx]=EMPTY;}
+            }
+        }
+    }
+}
+
+function draw(){
+    for(let y=0;y<H;y++){
+        for(let x=0;x<W;x++){
+            ctx.fillStyle=matColors[grid[id(x,y)]]||"#000";
+            ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+        }
+    }
+}
+
+function loop(){
+    physics();
+    draw();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
